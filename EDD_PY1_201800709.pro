@@ -30,4 +30,5 @@ HEADERS += \
     ColaFichas.h \
     ListaDobleDiccionario.h \
     ListaDobleFichasJugador.h \
-    ListaPunteos.h
+    ListaPunteos.h \
+    MatrizDispersa.h

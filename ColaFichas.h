@@ -185,7 +185,7 @@ public:
         NodoCola *temp = first;
         ofstream fs("letters.dot");
         fs << "digraph G{ " << endl;
-        fs << "rankdir = UD;" << endl;
+        fs << "rankdir = RL;" << endl;
         fs << "node [margin=0 shape=box style=filled];" << endl;
         while(temp != NULL){
             fs << i << "[label=\""<< temp->getFicha()->letra <<" x " << temp->getFicha()->punteo << "pts\"];" << endl;
