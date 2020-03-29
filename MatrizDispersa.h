@@ -3,6 +3,7 @@
 
 #include <locale>
 #include <string>
+#include <fstream>
 #include <ColaFichas.h>
 
 class NodoMatrix{
@@ -12,6 +13,7 @@ private:
     NodoMatrix *down;
     NodoMatrix *right;
     NodoMatrix *left;
+    int multiplicador;
     int posX;
     int posY;
 public:
@@ -23,6 +25,7 @@ public:
         left = NULL;
         this->posX = posX;
         this->posY = posY;
+        multiplicador = 1;
     }
     void setFicha(Ficha *ficha){
         this->ficha = ficha;
@@ -45,6 +48,9 @@ public:
     void setY(int posY){
         this->posY = posY;
     }
+    void setMultiplicador(int multiplicador){
+        this->multiplicador = multiplicador;
+    }
     Ficha *getFicha(){
         return ficha;
     }
@@ -66,11 +72,15 @@ public:
     int getY(){
         return posY;
     }
+    int getMultiplicador(){
+        return multiplicador;
+    }
 };
 
 class MatrizDispersa{
 private:
     NodoMatrix *root;
+    int max;
     //BUSCAR LA FILA
     NodoMatrix *searchY(int y){
         NodoMatrix *temp = root;
@@ -174,8 +184,9 @@ private:
         return fila;
     }
     //INSERTAR FICHA
-    void insertFicha(Ficha *ficha, int posX, int posY){
+    void insertFicha(Ficha *ficha, int posX, int posY, int multiplicador){
         NodoMatrix *nuevo = new NodoMatrix(ficha, posX, posY);
+        nuevo->setMultiplicador(multiplicador);
         NodoMatrix *columna = searchX(posX);
         NodoMatrix *fila = searchY(posY);
         //CASO 1: COLUMNA NO EXISTE Y FILA NO EXISTE
@@ -222,15 +233,195 @@ private:
             nuevo = insertOrderRow(nuevo, columna);
         }
     }
-
+    void graphMatrix();
 public:
-    MatrizDispersa(){
+    MatrizDispersa(int max){
         root = new NodoMatrix((new Ficha("Root", 0)),-1,-1);
+        this->max = max;
     }
     //INSERTAR FICHA
     void colocarFicha(Ficha *ficha, int posX, int posY){
-        insertFicha(ficha, posX, posY);
+        if(posX <= max && posY <= max && posX > -1 && posY > -1)
+            insertFicha(ficha, posX, posY, 1);
+    }
+    //INSERTAR MULTIPLICADORES
+    void colocarMultiplicador(int posX, int posY, int multiplicador){
+        if(posX <= max && posY <= max && posX > -1 && posY > -1)
+
+            insertFicha(NULL, posX, posY, multiplicador);
+    }
+    //GRAFICAR MATRIZ
+    void graficarMatriz(){
+        graphMatrix();
+    }
+    NodoMatrix *buscarX(int x){
+        return searchX(x);
+    }
+    NodoMatrix *buscarY(int y){
+        return searchY(y);
     }
 };
+
+void MatrizDispersa::graphMatrix(){
+    if(root->getDown() != NULL && root->getRight() != NULL){
+        int x = 0;//CONTADOR PARA EJE X
+        int y = 0;//CONTADOR PARA EJE Y
+        NodoMatrix *auxRow = root->getDown(); //NODO AUXILIAR PARA LAS FILAS
+        NodoMatrix *auxColumn = root->getRight(); //NODO AUXILIAR PARA LAS COLUMNAS
+        ofstream fs("matrix.dot");
+        fs << "digraph G{" << endl;
+        fs << "node[shape=box width=1.5 style=filled];" << endl;
+        //RAIZ
+        fs << "M[label=\"(" << root->getX() << ", " << root->getY();
+        fs << ")\" witdh=1.5, filled=crimson, group=1];" << endl;
+        fs << endl;
+
+        //CREACION DE LOS NODOS DE FILAS
+        while(auxRow != NULL){
+            fs << "F" << y << " [label=\"" << auxRow->getX() << ", " << auxRow->getY() << "\" fillcolor=burlywood1, group=1];" << endl;
+            y++;
+            auxRow = auxRow->getDown();
+        }
+        //CONECTAR NODOS DE FILAS
+        y=0;
+        auxRow = root->getDown();
+        while(auxRow->getDown() != NULL){
+            fs << "F" << y << " -> ";
+            y++;
+            auxRow = auxRow->getDown();
+        }
+        fs << "F" << y << "[dir=both];" << endl;
+        //while(y > 0){
+        //    fs << "F" << y << " -> ";
+        //    y--;
+        //}
+        fs << "F0 ;" << endl;
+
+        //CREACION DE NODOS DE COLUMNAS
+        while(auxColumn != NULL){
+            fs << "C" << x << " [label=\"" << auxColumn->getX() << ", " << auxColumn->getY() << "\", fillcolor=burlywood1, group=" << auxColumn->getX()+2 << "];" << endl;
+            x++;
+            auxColumn = auxColumn->getRight();
+        }
+        //CONECTAR NODOS DE COLUMNAS
+        x = 0;
+        auxColumn = root->getRight();
+        while(auxColumn->getRight() != NULL){
+            fs << "C" << x << " -> ";
+            x++;
+            auxColumn = auxColumn->getRight();
+        }
+        fs << "C" << x << "[dir=both];" << endl;
+        /*while(x > 0){
+            fs << "C" << x << " -> ";
+            x--;
+        }*/
+        fs << "C0" << endl;
+
+        //CONECTAR LAS COLUMNAS Y LAS FILAS A LA RAIZ
+        fs << "M -> F0;" << endl;
+        fs << "M -> C0;" << endl;
+
+        fs << endl;
+
+        //COLOCAR LAS COLUMAS EN LA MISMA LINEA
+        x = 0;
+        auxColumn = root->getRight();
+        fs << "{rank = same; M;";
+        while(auxColumn != NULL){
+            fs << " C" << x << ";";
+            x++;
+            auxColumn = auxColumn->getRight();
+        }
+        fs << "}" << endl;
+
+        fs << endl;
+
+        //CREACION DE NODOS POR CADA FILA
+        x = 0;
+        y = 0;
+        auxRow = root->getDown();
+        string color = "";
+        while(auxRow != NULL){
+            auxColumn = auxRow->getRight();
+            x = 0;
+            while(auxColumn != NULL){
+                //SI ES NODO CON FICHA
+                if(auxColumn->getFicha() != NULL){
+                    fs << "X" << auxColumn->getX() << "Y" << auxColumn->getY() << " [label=\""
+                       << auxColumn->getFicha()->letra << "\", fontcolor=white fillcolor=lightcoral, group="
+                       << auxColumn->getX()+2 << "];" << endl;
+                }
+                //SI ESTA VACIA PERO TIENE MULTIPLICADOR
+                else{
+                    if(auxColumn->getMultiplicador() == 2){
+                        color = "mediumaquamarine";
+                    }
+                    else if(auxColumn->getMultiplicador() == 3){
+                        color = "lightskyblue";
+                    }
+                    else{
+                        color = "gold";
+                    }
+                    fs << "X" << auxColumn->getX() << "Y" << auxColumn->getY() << " [label=\"x" << auxColumn->getMultiplicador()
+                       << "\", fontcolor=white fillcolor=" << color << ", group=" << auxColumn->getX()+2 << "];" << endl;
+                }
+                auxColumn = auxColumn->getRight();
+                x++;
+            }
+            fs << endl;
+            auxRow = auxRow->getDown();
+            y++;
+        }
+
+        fs << endl;
+
+        //CONECTAR LOS NODOS CREADOS
+        x = 0;
+        y = 0;
+        auxRow = root->getDown();
+        string alinearFila = "";
+        while(auxRow != NULL){
+            fs << "F" << y;
+            alinearFila = "F" + to_string(y);
+            auxColumn = auxRow->getRight();
+            while(auxColumn != NULL){
+                fs << " -> X" << auxColumn->getX() << "Y" << auxColumn->getY();
+                alinearFila += "; X" + to_string(auxColumn->getX()) + "Y" + to_string(auxColumn->getY());
+                auxColumn = auxColumn->getRight();
+                x++;
+            }
+            fs << "[dir=both];" << endl;
+            fs << "{rank=same; " << alinearFila << "}" << endl;
+            fs << endl;
+            y++;
+            auxRow = auxRow->getDown();
+            alinearFila.clear();
+        }
+
+        //CONECTAR LOS POR COLUMNAS
+        x = 0;
+        y = 0;
+        auxColumn = root->getRight();
+        while (auxColumn != NULL) {
+            fs << "C" << x;
+            auxRow = auxColumn->getDown();
+            while(auxRow != NULL){
+                fs << " -> X" << auxRow->getX() << "Y" << auxRow->getY();
+                auxRow = auxRow->getDown();
+            }
+            fs << ";" << endl;
+            auxColumn = auxColumn->getRight();
+            x++;
+        }
+        //FIN DEL GRAFICO
+        fs << "}" << endl;
+        fs.close();
+
+        system("dot -Tpng matrix.dot -o matrix.png");
+        system("display matrix.png");
+
+    }
+}
 
 #endif // MATRIZDISPERSA_H

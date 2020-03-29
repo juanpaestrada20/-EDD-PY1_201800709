@@ -94,7 +94,7 @@ public:
                 }
                 fs << endl;
                 temp = first;
-                for(j = 0; j < size; j++){
+                for(j = 0; j < size - 1; j++){
                     fs << j << " -> " << j+1 << "[dir=both];" << endl;
                     temp = temp->getNext();
                 }

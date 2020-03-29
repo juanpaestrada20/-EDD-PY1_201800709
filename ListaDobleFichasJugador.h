@@ -39,6 +39,7 @@ class FichasJugador{
 private:
     NodoDobleFichas *first;
     NodoDobleFichas *last;
+    string name;
     int size;
     void insertFichas(Ficha *ficha){
         NodoDobleFichas *nuevo = new NodoDobleFichas(ficha);
@@ -123,7 +124,7 @@ private:
             aux = aux->getNext();
         }
     }
-    void graphic(string name){
+    void graphic(){
         if(size > 0){
             int i = 0;
             int j = 0;
@@ -163,6 +164,13 @@ public:
         first = NULL;
         last = NULL;
         size = 0;
+        name = "";
+    }
+    void setJugador(string name){
+        this->name = name;
+    }
+    string getName(){
+        return name;
     }
     //metodo para rellenar sus 7 fichas
     void getFichas(Ficha *ficha){
@@ -176,8 +184,8 @@ public:
     void eliminarFicha(string letra){
         deleteFicha(letra);
     }
-    void graphHand(string name){
-        graphic(name);
+    void graphHand(){
+        graphic();
     }
 };
 
