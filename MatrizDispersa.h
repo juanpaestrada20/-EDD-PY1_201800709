@@ -234,6 +234,69 @@ private:
         }
     }
     void graphMatrix();
+    void deleteOrderedColumn(int posX, NodoMatrix *cabezaColumna){
+        NodoMatrix *temp = cabezaColumna;
+        bool flag = false;
+        while(temp != NULL){
+            if(temp->getX() == posX){
+                //NODO ENCONTRADO
+                flag = true;
+                break;
+            }
+            temp = temp->getRight();
+        }
+        if(flag){
+            if(temp->getRight() != NULL){
+                NodoMatrix *temp2 = temp->getLeft();
+                temp2->setRight(temp->getRight());
+                temp->getRight()->setLeft(temp2);
+                return;
+            }
+            //ES EL ULTIMO DE LA FILA
+            else{
+                temp->getLeft()->setRight(NULL);
+            }
+        }else{
+            return;
+        }
+    }
+    void deleteOrderedRow(int posY, NodoMatrix *cabezaFila){
+        NodoMatrix *temp = cabezaFila;
+        bool flag = false;
+        while(temp != NULL){
+            if(temp->getY() == posY){
+                //NODO ENCONTRADO
+                flag = true;
+                break;
+            }
+            temp = temp->getDown();
+        }
+        if(flag){
+            if(temp->getDown()!= NULL){
+                NodoMatrix *temp2 = temp->getUp();
+                temp2->setDown(temp->getDown());
+                temp->getDown()->setUp(temp2);
+                delete temp;
+                return;
+            }
+            //SI ES EL ULTIMO DE LA COLUMNA
+            else {
+                NodoMatrix *temp2 = temp->getUp();
+                temp2->setDown(NULL);
+                delete temp;
+                return;
+            }
+        }
+        else{
+            return;
+        }
+    }
+    void deleteNode(int posX, int posY){
+        NodoMatrix *columna = searchX(posX);
+        NodoMatrix *fila = searchY(posY);
+        deleteOrderedColumn(posX, fila);
+        deleteOrderedRow(posY, columna);
+    }
 public:
     MatrizDispersa(int max){
         root = new NodoMatrix((new Ficha("Root", 0)),-1,-1);
@@ -247,12 +310,16 @@ public:
     //INSERTAR MULTIPLICADORES
     void colocarMultiplicador(int posX, int posY, int multiplicador){
         if(posX <= max && posY <= max && posX > -1 && posY > -1)
-
             insertFicha(NULL, posX, posY, multiplicador);
     }
     //GRAFICAR MATRIZ
     void graficarMatriz(){
         graphMatrix();
+    }
+    //ELIMINAR DE LA MATRIZ
+    void eliminarNodo(int posX, int posY){
+        if(posX <= max && posY <= max && posX > -1 && posY > -1)
+            deleteNode(posX, posY);
     }
     NodoMatrix *buscarX(int x){
         return searchX(x);
