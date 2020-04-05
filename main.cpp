@@ -423,10 +423,8 @@ void juego(){
                         if(aux != NULL){
                             fichasPlayer2->eliminarFicha(letra);
                             fichas->enColar(aux);
-                            sleep(1);
                             Ficha *aux2 = fichas->desEnColar();
                             fichasPlayer2->getFichas(aux2);
-                            sleep(1);
                         }else{
                             i--;
                             system("clear");
@@ -480,7 +478,7 @@ void colocarFicha(int jugador){
         cin >> posX;
         cout << "POSICION EN Y:";
         cin >> posY;
-        Ficha *aux;
+        Ficha *aux = NULL;
         if(!verificarPosicion(posX,posY)){
             system("clear");
             cout << "Posición no valida\nPierde su turno" << endl;
@@ -550,7 +548,7 @@ void colocarFicha(int jugador){
             else{
                 if(jugador == 1){
                     punteoFinalPlayer1 += punteoLetra;
-                    cout << punteoLetra << endl;
+                    cout << "PUNTOS OBTENIDOS DE LETRA: " << aux->letra << " -> " << punteoLetra << endl;
                     sleep(2);
                     for (int i = fichasPlayer1->getSize(); i < 7; i++) {
                         fichasPlayer1->getFichas(fichas->desEnColar());
@@ -558,7 +556,7 @@ void colocarFicha(int jugador){
                 }
                 else{
                     punteoFinalPlayer2 += punteoLetra;
-                    cout << punteoLetra << endl;
+                    cout << "PUNTOS OBTENIDOS DE LETRA: " << aux->letra << " -> " << punteoLetra << endl;
                     sleep(2);
                     for (int i = fichasPlayer2->getSize(); i < 7; i++) {
                         fichasPlayer2->getFichas(fichas->desEnColar());
