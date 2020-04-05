@@ -480,7 +480,7 @@ void colocarFicha(int jugador){
         cin >> posX;
         cout << "POSICION EN Y:";
         cin >> posY;
-        Ficha *aux;
+        Ficha *aux = NULL;
         if(!verificarPosicion(posX,posY)){
             system("clear");
             cout << "Posición no valida\nPierde su turno" << endl;
