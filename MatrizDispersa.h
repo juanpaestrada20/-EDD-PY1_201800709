@@ -186,12 +186,14 @@ private:
     //INSERTAR FICHA
     void insertFicha(Ficha *ficha, int posX, int posY, int multiplicador){
         NodoMatrix *nuevo = new NodoMatrix(ficha, posX, posY);
-        nuevo->setMultiplicador(multiplicador);
+        if(multiplicador != 0){
+            nuevo->setMultiplicador(multiplicador);
+        }
         NodoMatrix *columna = searchX(posX);
         NodoMatrix *fila = searchY(posY);
         //CASO 1: COLUMNA NO EXISTE Y FILA NO EXISTE
         if(columna == NULL && fila == NULL){
-            cout << "Caso 1" << endl;
+            //cout << "Caso 1" << endl;
             //CREAR COLUMNA
             columna = createColumn(posX);
             //CRAR FILA
@@ -204,7 +206,7 @@ private:
         }
         //CASO 2: COLUMNA NO EXISTE Y FILA SI EXISTE
         else if(columna == NULL && fila != NULL){
-            cout << "Caso 2" << endl;
+            //cout << "Caso 2" << endl;
             //CREAR COLUMNA
             columna = createColumn(posX);
             //INSERTAR DE FORMA ORDENADA EN COLUMNA
@@ -215,7 +217,7 @@ private:
         }
         //CASO 3: COLUMNA SI EXISTE Y FILA NO EXISTE
         else if(columna != NULL && fila == NULL){
-            cout << "Caso 3" << endl;
+            //cout << "Caso 3" << endl;
             //CRAR FILA
             fila = createRow(posY);
             //INSERTAR DE FORMA ORDENADA EN COLUMNA
@@ -226,7 +228,7 @@ private:
         }
         //CASO 4: COLUMNA SI EXISTE Y FILA SI EXISTE
         else if(columna != NULL && fila != NULL){
-            cout << "Caso 4" << endl;
+            //cout << "Caso 4" << endl;
             //INSERTAR DE FORMA ORDENADA EN COLUMNA
             nuevo = insertOrderColumn(nuevo, fila);
             //INSERTAR DE FORMA ORDENADA EN FILA
@@ -234,6 +236,94 @@ private:
         }
     }
     void graphMatrix();
+    void deleteOrderedColumn(int posX, NodoMatrix *cabezaColumna){
+        NodoMatrix *temp = cabezaColumna;
+        bool flag = false;
+        while(temp != NULL){
+            if(temp->getX() == posX){
+                //NODO ENCONTRADO
+                flag = true;
+                break;
+            }
+            temp = temp->getRight();
+        }
+        if(flag){
+            if(temp->getMultiplicador() > 1){
+                temp->setFicha(NULL);
+                return;
+            }
+            else if(temp->getRight() != NULL){
+                NodoMatrix *temp2 = temp->getLeft();
+                temp2->setRight(temp->getRight());
+                temp->getRight()->setLeft(temp2);
+                return;
+            }
+            //ES EL ULTIMO DE LA FILA
+            else{
+                temp->getLeft()->setRight(NULL);
+            }
+        }else{
+            return;
+        }
+    }
+    void deleteOrderedRow(int posY, NodoMatrix *cabezaFila){
+        NodoMatrix *temp = cabezaFila;
+        bool flag = false;
+        while(temp != NULL){
+            if(temp->getY() == posY){
+                //NODO ENCONTRADO
+                flag = true;
+                break;
+            }
+            temp = temp->getDown();
+        }
+        if(flag){
+            if(temp->getMultiplicador() > 1){
+                temp->setFicha(NULL);
+                return;
+            }
+            else if(temp->getDown()!= NULL){
+                NodoMatrix *temp2 = temp->getUp();
+                temp2->setDown(temp->getDown());
+                temp->getDown()->setUp(temp2);
+                delete temp;
+                return;
+            }
+            //SI ES EL ULTIMO DE LA COLUMNA
+            else {
+                NodoMatrix *temp2 = temp->getUp();
+                temp2->setDown(NULL);
+                delete temp;
+                return;
+            }
+        }
+        else{
+            return;
+        }
+    }
+    void deleteNode(int posX, int posY){
+        NodoMatrix *columna = searchX(posX);
+        NodoMatrix *fila = searchY(posY);
+        deleteOrderedColumn(posX, fila);
+        deleteOrderedRow(posY, columna);
+    }
+    NodoMatrix *searchNode(int posX, int posY){
+        NodoMatrix *columna = searchX(posX);
+        NodoMatrix *temp = columna;
+        bool flag = false;
+        while(temp != NULL){
+            if(temp->getY() == posY){
+                //NODO ENCONTRADO
+                flag = true;
+                break;
+            }
+            temp = temp->getDown();
+        }
+        if(flag)
+            return temp;
+        else
+            return NULL;
+    }
 public:
     MatrizDispersa(int max){
         root = new NodoMatrix((new Ficha("Root", 0)),-1,-1);
@@ -241,24 +331,31 @@ public:
     }
     //INSERTAR FICHA
     void colocarFicha(Ficha *ficha, int posX, int posY){
-        if(posX <= max && posY <= max && posX > -1 && posY > -1)
-            insertFicha(ficha, posX, posY, 1);
+        if(posX <= max && posY <= max && posX > -1 && posY > -1 && ficha != NULL)
+            insertFicha(ficha, posX, posY, 0);
     }
     //INSERTAR MULTIPLICADORES
     void colocarMultiplicador(int posX, int posY, int multiplicador){
         if(posX <= max && posY <= max && posX > -1 && posY > -1)
-
             insertFicha(NULL, posX, posY, multiplicador);
     }
     //GRAFICAR MATRIZ
     void graficarMatriz(){
         graphMatrix();
     }
+    //ELIMINAR DE LA MATRIZ
+    void eliminarNodo(int posX, int posY){
+        if(posX <= max && posY <= max && posX > -1 && posY > -1)
+            deleteNode(posX, posY);
+    }
     NodoMatrix *buscarX(int x){
         return searchX(x);
     }
     NodoMatrix *buscarY(int y){
         return searchY(y);
+    }
+    NodoMatrix *buscarNodo(int x, int y){
+        return searchNode(x, y);
     }
 };
 
@@ -410,7 +507,7 @@ void MatrizDispersa::graphMatrix(){
                 fs << " -> X" << auxRow->getX() << "Y" << auxRow->getY();
                 auxRow = auxRow->getDown();
             }
-            fs << ";" << endl;
+            fs << "[dir=both];" << endl;
             auxColumn = auxColumn->getRight();
             x++;
         }

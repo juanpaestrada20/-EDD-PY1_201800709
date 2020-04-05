@@ -49,8 +49,6 @@ private:
         }else{
             last->setNext(nuevo);
             nuevo->setPrev(last);
-            nuevo->setNext(first);
-            first->setPrev(nuevo);
             last = nuevo;
         }
         size++;
@@ -100,11 +98,11 @@ private:
             return;
         else if(pos == 0)
             eliminarPrimero();
-        else if(pos == size)
+        else if(pos == size-1)
             eliminarUltimo();
         else if(first != NULL){
             NodoDobleFichas *aux = first;
-            for(int i = 1; i < pos; i++)
+            for(int i = 1; i <= pos; i++)
                 aux = aux->getNext();
             aux->getPrev()->setNext(aux->getNext());
             aux->getNext()->setPrev(aux->getPrev());
@@ -186,6 +184,9 @@ public:
     }
     void graphHand(){
         graphic();
+    }
+    int getSize(){
+        return size;
     }
 };
 
