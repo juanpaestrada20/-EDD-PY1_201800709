@@ -23,6 +23,7 @@
 #include "MatrizDispersa.h"
 
 static MatrizDispersa *matrix;
+static MatrizDispersa *original;
 static ArbolJugadores *jugadores;
 static Cola *fichas;
 static ListaDoble *diccionario;
@@ -34,11 +35,21 @@ static Cola *TodasFichas;
 
 static string player1;
 static string player2;
+static bool continuarColocando;
+static bool palabraValida;
+static int posXAnterior;
+static int posYAnterior;
+static string palabraTurno;
+static int punteoFinalPlayer1;
+static int punteoFinalPlayer2;
+static int puntosExtra;
 
 void jsonExample(QString filename);
 void menuOption();
 void menuReportes();
 void juego();
+void colocarFicha(int jugador);
+bool verificarPosicion(int actualX, int actualY);
 
 int main(int argc, char *argv[])
 {
@@ -48,8 +59,7 @@ int main(int argc, char *argv[])
     TodasFichas = new Cola;
     diccionario = new ListaDoble();
     jugadores = new ArbolJugadores();
-    fichasPlayer1 = new FichasJugador();
-    fichasPlayer2 = new FichasJugador();
+
     punteosMejoresJugadores = new ListaSimple();
 
     fichas->crearFichas();
@@ -73,7 +83,7 @@ void jsonExample(QString filename){
     //qDebug()<< "Dimension:";
     //qDebug()<< jsonObject.value(QStringLiteral("dimension")).toInt();
 
-    matrix = new MatrizDispersa(jsonObject.value(QStringLiteral("dimension")).toInt());
+    original = new MatrizDispersa(jsonObject.value(QStringLiteral("dimension")).toInt());
 
     QJsonObject artista = jsonObject["casillas"].toObject();
     QJsonArray jsonArray3 = artista["dobles"].toArray();
@@ -87,7 +97,7 @@ void jsonExample(QString filename){
         //qDebug()<< obj.value(QStringLiteral("y")).toInt();
         int x = obj.value(QStringLiteral("x")).toInt();
         int y = obj.value(QStringLiteral("y")).toInt();
-        matrix->colocarMultiplicador(x, y, 2);
+        original->colocarMultiplicador(x, y, 2);
     }
     foreach (const QJsonValue & value, jsonArray4) {
         QJsonObject obj = value.toObject();
@@ -97,10 +107,10 @@ void jsonExample(QString filename){
         //qDebug()<< obj.value(QStringLiteral("y")).toInt();
         int x = obj.value(QStringLiteral("x")).toInt();
         int y = obj.value(QStringLiteral("y")).toInt();
-        matrix->colocarMultiplicador(x, y, 3);
+        original->colocarMultiplicador(x, y, 3);
     }
     QJsonArray jsonArray5 = jsonObject["diccionario"].toArray();
-    qDebug()<< "DICCIONARIO";
+    //qDebug()<< "DICCIONARIO";
     foreach (const QJsonValue & value, jsonArray5) {
         QJsonObject obj = value.toObject();
         QJsonObject palabra = obj["palabra"].toObject();
@@ -108,7 +118,8 @@ void jsonExample(QString filename){
         //qDebug() << obj.value(QStringLiteral("palabra")).toString();
         QString word = obj.value(QStringLiteral("palabra")).toString();
         string nueva = word.toStdString();
-        diccionario->insertWord(nueva);
+        if(!configuraciones)
+            diccionario->insertWord(nueva);
     }
     configuraciones = true;
 }
@@ -146,13 +157,19 @@ void menuOption(){
                     system("clear");
                 }
                 else {
+                    jsonExample("/home/juanpa/EDD_PY1_201800709/entrada.json");
+                    matrix = original;
                     system("clear");
                     cout << "INGRESE NOMBRE DEL JUGADOR 1" << endl;
                     cin >> player1;
                     cout << "INGRESE NOMBRE DEL JUGADOR 2" << endl;
                     cin >> player2;
-                    jugadores->insertNewPlayer(player1);
-                    jugadores->insertNewPlayer(player2);
+                    fichasPlayer1 = new FichasJugador();
+                    fichasPlayer2 = new FichasJugador();
+                    if(jugadores->searchPlayer(player1) == NULL)
+                        jugadores->insertNewPlayer(player1);
+                    if(jugadores->searchPlayer(player2) == NULL)
+                        jugadores->insertNewPlayer(player2);
                     fichasPlayer1->setJugador(player1);
                     fichasPlayer2->setJugador(player2);
                     for (int i = 0; i < 7; i++) {
@@ -161,6 +178,14 @@ void menuOption(){
                     }
                     system("clear");
                     juego();
+                    jugadores->searchPlayer(player1)->newPoints(punteoFinalPlayer1);
+                    jugadores->searchPlayer(player2)->newPoints(punteoFinalPlayer2);
+                    cout << "PARTIDA FINALIZADA" << endl;
+                    cout << "PUNTOS DE: " << player1 << " " << punteoFinalPlayer1 << endl;
+                    cout << "PUNTOS DE: " << player2 << " " << punteoFinalPlayer2 << endl;
+                    sleep(3);
+                    punteoFinalPlayer1 = 0;
+                    punteoFinalPlayer2 = 0;
                     system("clear");
                 }
             break;
@@ -176,7 +201,7 @@ void menuOption(){
                 system("clear");
             }
             else{
-                jsonExample("/home/juanpa/EDD_PY1_201800709/entrada.json");
+                jsonExample("entrada.json");
                 system("clear");
                 cout << "Cargando configuraciones de juego, espere un momento..." << endl;
                 sleep(3);
@@ -241,11 +266,11 @@ void menuReportes(){
         case 7:
             cout << "INGRESE EL NOMBRE DEL JUGADOR: ";
             cin >> jugador;
-            jugadores->searchPlayer(jugador)->getLista();
+            jugadores->searchPlayer(jugador)->getLista()->playerPointsGraph(jugador);
             system("clear");
             break;
         case 8:
-            jugadores->getBestPoints();
+            jugadores->getBestPoints()->bestPointsGraph();
             system("clear");
             break;
         case 9:
@@ -275,10 +300,19 @@ void juego(){
     int option2;
     int cantidad;
     string letra;
+    punteoFinalPlayer1 = 0;
+    punteoFinalPlayer2 = 0;
+    puntosExtra = 0;
+    bool finJuego = false;
     do{
 
         //TURNO DEL JUGADOR 1
         do{
+            system("clear");
+            palabraTurno.clear();
+            palabraValida = false;
+            posXAnterior = -1;
+            posYAnterior = -1;
             cout << "TURNO DEL JUGADOR 1:\n"
                     "1. VER FICHAS PROPIAS\n"
                     "2. COLOCAR FICHAS\n"
@@ -294,7 +328,11 @@ void juego(){
                 fichasPlayer1->graphHand();
                 break;
             case 2:
-                //PENDIENTE A COLOCAR FICHAS
+                system("clear");
+                continuarColocando = true;
+                palabraValida = false;
+                colocarFicha(1);
+                option1 = 7;
                 break;
             case 3:{
                 system("clear");
@@ -311,10 +349,8 @@ void juego(){
                         if(aux != NULL){
                             fichasPlayer1->eliminarFicha(letra);
                             fichas->enColar(aux);
-                            sleep(1);
                             Ficha *aux2 = fichas->desEnColar();
                             fichasPlayer1->getFichas(aux2);
-                            sleep(1);
                         }else{
                             i--;
                             system("clear");
@@ -322,6 +358,8 @@ void juego(){
                     }
                     fichasPlayer1->graphHand();
                 }
+                cout << "Turno Finalizado" << endl;
+                sleep(1);
                 system("clear");
                 option1 = 7;
                 break;
@@ -337,15 +375,19 @@ void juego(){
                 break;
             case 6:
                 option1 = 7;
-                opcionGlobal = 7;
+                finJuego = true;
                 break;
             }
         }while(option1 != 7);
-        if(option1 == 6){
+        if(finJuego){
             opcionGlobal = 7;
             break;
         }
         do{
+            palabraTurno.clear();
+            palabraValida = false;
+            posXAnterior = -1;
+            posYAnterior = -1;
             system("clear");
             cout << "TURNO DEL JUGADOR 2:\n"
                     "1. VER FICHAS PROPIAS\n"
@@ -355,14 +397,16 @@ void juego(){
                     "5. VER TABLERO\n"
                     "6. FINALIZAR JUEGO\n" << endl;
             cin >> option2;
-            //SWITCH DEL PRIMER JUGADOR
             switch (option2) {
             case 1:
                 system("clear");
                 fichasPlayer2->graphHand();
                 break;
             case 2:
-                //PENDIENTE A COLOCAR FICHAS
+                system("clear");
+                continuarColocando = true;
+                colocarFicha(2);
+                option2 = 7;
                 break;
             case 3:{
                 system("clear");
@@ -390,6 +434,8 @@ void juego(){
                     }
                     fichasPlayer2->graphHand();
                 }
+                cout << "Turno Finalizado" << endl;
+                sleep(2);
                 system("clear");
                 option2 = 7;
                 break;
@@ -405,12 +451,176 @@ void juego(){
 
             case 6:
                 option2 = 7;
+                finJuego = true;
                 break;
             }
         }while(option2 != 7);
-        if(option2 == 7){
+        if(finJuego){
             opcionGlobal = 7;
             break;
         }
     }while (opcionGlobal != 7);
 }
+
+void colocarFicha(int jugador){
+    if(continuarColocando){
+        puntosExtra = 0;
+        int punteoLetra = 0;
+        string letraColocar;
+        int posX;
+        int posY;
+        string palabra;
+        cout << "QUE FICHA DESEA COLOCAR?" << endl;
+        if(jugador == 1)
+            fichasPlayer1->graphHand();
+        else
+            fichasPlayer2->graphHand();
+        cin >> letraColocar;
+        cout << "POSICION EN X:";
+        cin >> posX;
+        cout << "POSICION EN Y:";
+        cin >> posY;
+        Ficha *aux;
+        if(!verificarPosicion(posX,posY)){
+            system("clear");
+            cout << "Posición no valida\nPierde su turno" << endl;
+            sleep(2);
+            continuarColocando = false;
+        }
+        else{
+
+            if(jugador==1){
+               aux = fichasPlayer1->colocarFicha(letraColocar);
+               fichasPlayer1->eliminarFicha(letraColocar);
+            }
+            else{
+                aux = fichasPlayer2->colocarFicha(letraColocar);
+                fichasPlayer2->eliminarFicha(letraColocar);
+            }
+            matrix->colocarFicha(aux, posX, posY);
+            if(aux != NULL){
+                punteoLetra = aux->punteo*matrix->buscarNodo(posX, posY)->getMultiplicador();
+                if(puntosExtra>0){
+                    punteoLetra += puntosExtra;
+                    puntosExtra = 0;
+                    sleep(2);
+                }
+            }
+            matrix->graficarMatriz();
+            cout << "DESEA VALIDAR LA PALABRA?" << endl;
+            cin >> palabra;
+
+            if(palabra == "si" || palabra == "SI" || palabra == "Si" || palabra == "sI"){
+                continuarColocando = false;
+                if(aux != NULL)
+                    palabraTurno += aux->letra;
+                cout << "Palabra a evaluar: " << palabraTurno << endl;
+                if(diccionario->palabraValida(palabraTurno)){
+                    palabraValida = true;
+                    sleep(2);
+                    cout << "Palabra Valida" << endl;
+                }
+                else{
+                    palabraValida = false;
+                    cout << "Palabra invalida\nFin Turno" << endl;
+                }
+                sleep(3);
+            }else{
+                if(aux != NULL){
+                    palabraTurno += aux->letra;
+                    posXAnterior = posX;
+                    posYAnterior = posY;
+                }
+                colocarFicha(jugador);
+            }
+        }
+        if(!continuarColocando){
+            //valida
+            if(!palabraValida){
+                if(jugador == 1){
+                    fichasPlayer1->getFichas(aux);
+                    matrix->eliminarNodo(posX, posY);
+                    return;
+                }else{
+                    fichasPlayer2->getFichas(aux);
+                    matrix->eliminarNodo(posX, posY);
+                    return;
+                }
+            }
+            else{
+                if(jugador == 1){
+                    punteoFinalPlayer1 += punteoLetra;
+                    cout << punteoLetra << endl;
+                    sleep(2);
+                    for (int i = fichasPlayer1->getSize(); i < 7; i++) {
+                        fichasPlayer1->getFichas(fichas->desEnColar());
+                    }
+                }
+                else{
+                    punteoFinalPlayer2 += punteoLetra;
+                    cout << punteoLetra << endl;
+                    sleep(2);
+                    for (int i = fichasPlayer2->getSize(); i < 7; i++) {
+                        fichasPlayer2->getFichas(fichas->desEnColar());
+                    }
+                }
+                return;
+            }
+        }
+    }
+}
+
+bool verificarPosicion(int actualX, int actualY){
+    puntosExtra = 0;
+    //POSICION DE INICIO, PARA COMEZAR A COLOCAR
+    if(posXAnterior == -1 && posYAnterior == -1){
+     return true;
+    }
+    // EN LA MISMA POSICION QUE PUSO ANTES
+    else if(actualX == posXAnterior && actualY == posYAnterior){
+        return false;
+    }
+    //POSICION ARRIBA
+    else if(actualY < posYAnterior){
+        return false;
+    }
+    //POSICION A LA IZQUIERDA
+    else if(actualX < posXAnterior){
+        return false;
+    }
+    //INCLINADO
+    else if(actualX != posXAnterior && actualY != posYAnterior){
+        return false;
+    }
+    //POSICION CORRECTA
+    else if(actualX == posXAnterior && posYAnterior < actualY){
+        for(int i = posYAnterior+1; i < actualY; i++){
+            //DEJAR UN ESPACIO EN BLANCO EN y
+            if(matrix->buscarNodo(actualX, i)->getFicha() == NULL){
+                return false;
+            }
+            else{
+                palabraTurno += matrix->buscarNodo(actualX, i)->getFicha()->letra;
+                puntosExtra += matrix->buscarNodo(actualX, i)->getFicha()->punteo*matrix->buscarNodo(actualX, i)->getMultiplicador();
+            }
+        }
+        return true;
+    }
+    else if(actualX > posXAnterior && posYAnterior == actualY){
+        for(int i = posXAnterior+1; i < actualX; i++){
+            //DEJAR UN ESPACIO EN BLANCO EN y
+            if(matrix->buscarNodo(i, actualY)->getFicha() == NULL){
+                return false;
+            }
+            else{
+                palabraTurno += matrix->buscarNodo(i, actualY)->getFicha()->letra;
+                puntosExtra += matrix->buscarNodo(i, actualY)->getFicha()->punteo*matrix->buscarNodo(i, actualY)->getMultiplicador();
+            }
+        }
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+

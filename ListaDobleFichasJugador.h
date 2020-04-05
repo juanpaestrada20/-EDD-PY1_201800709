@@ -185,6 +185,9 @@ public:
     void graphHand(){
         graphic();
     }
+    int getSize(){
+        return size;
+    }
 };
 
 

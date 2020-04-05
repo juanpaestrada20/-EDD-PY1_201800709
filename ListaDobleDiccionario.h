@@ -107,6 +107,20 @@ public:
             system("display dictionary.png");
         }
     }
+    bool palabraValida(string palabra){
+        NodoDoble *temp = first;
+        bool flag = false;
+        int i = 0;
+        while (i<size) {
+            if(temp->getWord() == palabra){
+                flag = true;
+                break;
+            }
+            temp = temp->getNext();
+            i++;
+        }
+        return flag;
+    }
 };
 
 #endif // LISTADOBLEDICCIONARIO_H
